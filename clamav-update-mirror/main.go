@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/pivotal-cloudops/cloudops-ci/concourse/tasks/clamav-update-mirror/clamav"
+	"gitlab.apps.prd.central-us-pcf.fnts.io/ops/clamav/clamav-update-mirror/clamav"
 )
 
 func main() {
