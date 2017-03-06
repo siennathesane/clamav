@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 	"os"
-
-	"gitlab.apps.prd.central-us-pcf.fnts.io/ops/clamav/clamav-update-mirror/clamav"
+	"./clamav"
 )
+
 
 func main() {
 

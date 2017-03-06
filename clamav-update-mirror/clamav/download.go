@@ -5,10 +5,12 @@ import (
 	"log"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"net/http"
+	"io/ioutil"
+	"sync"
 )
 
 type VersionSet struct {
@@ -78,12 +80,12 @@ func ParseCvdVersion(cvdFile string) (int, error) {
 
 func DownloadDatabase(dbDir string) error {
 	var err error
+	var downloadClient  = &http.Client{}
+	var wg sync.WaitGroup
 
 	for _, dbType := range dbTypes {
-		err = downloadFile(mainMirror+"/"+dbType+".cvd", dbDir)
-		if err != nil {
-			return err
-		}
+		wg.Add(1)
+		go downloadFile(mainMirror+"/"+dbType+".cvd", dbDir, downloadClient, &wg)
 
 		var cdiffVer int
 		cdiffVer, err = ParseCvdVersion(filepath.Join(dbDir, dbType+".cvd"))
@@ -91,27 +93,39 @@ func DownloadDatabase(dbDir string) error {
 			return err
 		}
 		cdiffUrl := mainMirror + "/" + dbType + "-" + strconv.Itoa(cdiffVer) + ".cdiff"
-		err = downloadFile(cdiffUrl, dbDir)
-		if err != nil {
-			return err
-		}
+		wg.Add(1)
+		go downloadFile(cdiffUrl, dbDir, downloadClient, &wg)
 	}
+	wg.Wait()
 
 	return nil
 }
 
-func downloadFile(rawUrl, dest string) error {
+func downloadFile(rawUrl, dest string, cl *http.Client, wg *sync.WaitGroup) {
+	defer wg.Done()
 	var err error
 	var cvdUrl *url.URL
 	if cvdUrl, err = url.Parse(rawUrl); err != nil {
-		return err
+		panic(err)
 	}
 
 	filename := strings.TrimLeft(cvdUrl.Path, "/")
 	log.Println("Downloading", filename)
 
 	cvdDest := filepath.Join(dest, filename)
-	err = exec.Command("curl", rawUrl, "-o", cvdDest).Run()
+	resp, err := cl.Get(rawUrl)
+	if err != nil {
+		log.Panicf("failed to download file! %s", err)
+	}
+	defer resp.Body.Close()
 
-	return err
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Panicf("failed to read file! %s", err)
+	}
+
+	if err = ioutil.WriteFile(cvdDest, body, 0666); err != nil {
+		log.Panicf("failed to write file! %s", err)
+	}
+	log.Println("done downloading", cvdDest)
 }
