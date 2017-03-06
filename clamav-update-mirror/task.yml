@@ -1,0 +1,13 @@
+---
+platform: linux
+image: docker:///pcfseceng/pci
+
+inputs:
+  - name: task-repo
+    path: go/src/github.com/pivotal-cloudops/cloudops-ci/
+
+outputs:
+  - name: cvds
+
+run:
+  path: go/src/github.com/pivotal-cloudops/cloudops-ci/concourse/tasks/clamav-update-mirror/task.sh

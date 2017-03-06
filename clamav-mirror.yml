@@ -1,0 +1,147 @@
+groups:
+  - name: clamav-mirror
+    jobs:
+      - validate-mirror
+      - mirror-update
+
+resources:
+  - name: repo
+    type: git
+    source:
+      uri: git@github.com:pivotal-cloudops/cloudops-ci.git
+      branch: master
+      private_key: {{ci_concourse_github_key}}
+
+#  - name: clamav-release
+#    type: git
+#    source:
+#      uri: git@github.com:pivotal-cf/clamav-release.git
+#      branch: dev
+#      private_key: {{ci_concourse_github_key}}
+#      ignore_paths: [.final_builds, releases]
+
+  - name: every-hour
+    type: time
+    source:
+      interval: 1h
+
+  - name: main
+    type: s3
+    source:
+       versioned_file: main.cvd
+       bucket: pivotal-clamav-mirror
+       endpoint:
+       access_key_id: {{clamav_mirror_access}}
+       secret_access_key: {{clamav_mirror_secret}}
+
+  - name: daily-cdiff
+    type: s3
+    source:
+       bucket: pivotal-clamav-mirror
+       regexp: daily-(.*).cdiff
+       access_key_id: {{clamav_mirror_access}}
+       secret_access_key: {{clamav_mirror_secret}}
+
+  - name: bytecode-cdiff
+    type: s3
+    source:
+       bucket: pivotal-clamav-mirror
+       regexp: bytecode-(.*).cdiff
+       access_key_id: {{clamav_mirror_access}}
+       secret_access_key: {{clamav_mirror_secret}}
+
+  - name: bytecode
+    type: s3
+    source:
+       versioned_file: bytecode.cvd
+       bucket: pivotal-clamav-mirror
+       access_key_id: {{clamav_mirror_access}}
+       secret_access_key: {{clamav_mirror_secret}}
+
+  - name: daily
+    type: s3
+    source:
+       versioned_file: daily.cvd
+       bucket: pivotal-clamav-mirror
+       access_key_id: {{clamav_mirror_access}}
+       secret_access_key: {{clamav_mirror_secret}}
+
+
+  - name: last
+    type: s3
+    source:
+       versioned_file: last
+       bucket: pivotal-clamav-mirror
+       access_key_id: {{clamav_mirror_access}}
+       secret_access_key: {{clamav_mirror_secret}}
+
+jobs:
+  - name: clamav-mirror
+    type: s3
+    source:
+       bucket: pivotal-clamav-mirror
+       regexp: (.*).cvd
+       access_key_id: {{clamav_mirror_access}}
+       secret_access_key: {{clamav_mirror_secret}}
+  - name: interval-trigger
+    type:
+    source:
+       bucket: pivotal-clamav-mirror
+       regexp: (.*).cvd
+       access_key_id: {{clamav_mirror_access}}
+       secret_access_key: {{clamav_mirror_secret}}
+
+jobs:
+  - name: validate-mirror
+    plan:
+      - get: every-hour
+        trigger: true
+      - get: task-repo
+      - get: clamav-release
+      - task: validate-mirror
+        attempts: 3
+        file: task-repo/concourse/tasks/clamav-validate-mirror/task.yml
+        input_mapping:
+          code-repo: task-repo
+
+  - name: mirror-update
+    plan:
+      - get: every-hour
+        passed: [ validate-mirror ]
+        trigger: true
+      - get: task-repo
+      - task: download_cvds
+        attempts: 3
+        file: task-repo/concourse/tasks/clamav-update-mirror/task.yml
+        input_mapping:
+          code-repo: task-repo
+      - put: main
+        attempts: 3
+        params:
+          file: cvds/main.cvd
+          acl: public-read
+      - put: daily
+        attempts: 3
+        params:
+          file: cvds/daily.cvd
+          acl: public-read
+      - put: bytecode
+        attempts: 3
+        params:
+          file: cvds/bytecode.cvd
+          acl: public-read
+      - put: daily-cdiff
+        attempts: 3
+        params:
+          file: cvds/daily-*.cdiff
+          acl: public-read
+      - put: bytecode-cdiff
+        attempts: 3
+        params:
+          file: cvds/bytecode-*.cdiff
+          acl: public-read
+      - put: last
+        attempts: 3
+        params:
+          file: cvds/last
+          acl: public-read

@@ -1,0 +1,10 @@
+---
+platform: linux
+image: docker:///pcfseceng/pci
+
+inputs:
+  - name: task-repo
+  - name: clamav-release
+
+run:
+  path: task-repo/concourse/tasks/clamav-validate-mirror/task.sh
