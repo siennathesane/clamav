@@ -1,0 +1,16 @@
+hash: fc41ee489806afc945aca8e802d7a807724b0c3a3ad327f95310993375f5be8e
+updated: 2017-03-06T20:48:35.021580333-06:00
+imports:
+- name: github.com/cloudfoundry-community/go-cfenv
+  version: 3b3d4d0e3aaeae8f0b7d0d41257228e92cef463e
+- name: github.com/mitchellh/mapstructure
+  version: db1efb556f84b25a0a13a04aad883943538ad2e0
+- name: github.com/Sirupsen/logrus
+  version: 0208149b40d863d2c1a2f8fe5753096a9cf2cc8b
+- name: golang.org/x/sys
+  version: c200b10b5d5e122be351b67af224adc6128af5bf
+  subpackages:
+  - unix
+- name: gopkg.in/robfig/cron.v2
+  version: b024fc5ea0e34bc3f83d9941c8d60b0622bfaca4
+testImports: []

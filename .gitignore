@@ -2,3 +2,6 @@
 /.idea/
 /clamav-update-mirror/tmp/
 /clamav-update-mirror/clamav-update-mirror
+/vendor/
+/main
+/clamav
