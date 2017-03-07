@@ -1,6 +1,10 @@
-hash: fc41ee489806afc945aca8e802d7a807724b0c3a3ad327f95310993375f5be8e
-updated: 2017-03-06T20:48:35.021580333-06:00
+hash: ca35ab414b26a41c5ffbd61caa403e8505479571dce9a81d82541ac6d5864723
+updated: 2017-03-07T10:41:35.481824638-06:00
 imports:
+- name: github.com/allegro/bigcache
+  version: dedad99b9443f185104674c68892afb22fd464b2
+  subpackages:
+  - queue
 - name: github.com/cloudfoundry-community/go-cfenv
   version: 3b3d4d0e3aaeae8f0b7d0d41257228e92cef463e
 - name: github.com/mitchellh/mapstructure

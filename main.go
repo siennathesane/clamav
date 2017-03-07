@@ -46,8 +46,9 @@ func main() {
 		log.Errorf("cannot initialise cache. %s")
 	}
 
-	log.Infof("starting server and initial seed.")
-	DownloadDatabase(cache)
+	// let the initial seed run in the background so the web server can start.
+	log.Info("starting initial seed in the background.")
+	go DownloadDatabase(cache)
 
 	// start a new crontab asynchronously.
 	c := cron.New()
@@ -65,11 +66,19 @@ func main() {
 
 // cacheHandler is just a standard handler, but returns stuff from cache.
 func cacheHandler(w http.ResponseWriter, r *http.Request, c *bigcache.BigCache) {
-	entry, err := c.Get(r.URL.Path[1:])
+	filename := r.URL.Path[1:]
+	entry, err := c.Get(filename)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+			"filename": filename,
+		}).Error("cannot return cached file!")
 		log.Error(err)
+		http.NotFound(w, r)
 	}
 
-	log.Infof("looking in cache for: %s", r.URL.Path[1:])
+	log.WithFields(log.Fields{
+		"filename": filename,
+	}).Info("found!")
 	w.Write(entry)
 }
