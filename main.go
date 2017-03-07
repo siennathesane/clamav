@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"github.com/allegro/bigcache"
 	"time"
+	"os"
+	"strings"
 )
 
 const (
@@ -17,6 +19,7 @@ const (
 func init() {
 	// TODO add runtime.Caller(1) info to it.
 	log.SetFormatter(&log.JSONFormatter{})
+	log.SetOutput(os.Stdout)
 }
 
 func main() {
@@ -52,7 +55,7 @@ func main() {
 
 	// start a new crontab asynchronously.
 	c := cron.New()
-	c.AddFunc("@every 3h", func() { DownloadDatabase(cache) })
+	c.AddFunc("@hourly", func() { DownloadDatabase(cache) })
 	c.Start()
 
 	log.Info("started cron job for definition updates.")
@@ -67,10 +70,17 @@ func main() {
 // cacheHandler is just a standard handler, but returns stuff from cache.
 func cacheHandler(w http.ResponseWriter, r *http.Request, c *bigcache.BigCache) {
 	filename := r.URL.Path[1:]
+
+	// logs from the gorouter.
+	if strings.Contains(filename, "cloudfoundry") {
+		log.Warn("nothing to see here, move along.")
+		http.NotFound(w, r)
+	}
+
 	entry, err := c.Get(filename)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"err": err,
+			"err":      err,
 			"filename": filename,
 		}).Error("cannot return cached file!")
 		log.Error(err)
