@@ -1,0 +1,9 @@
+applications:
+- name: clamav-mirror
+  instances: 1
+  memory: 2048M
+  disk_quota: 128M
+  routes:
+  - route: cmir
+  buildpack: https://github.com/cloudfoundry/go-buildpack.git
+  stack: cflinuxfs2
