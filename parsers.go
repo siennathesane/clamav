@@ -13,7 +13,9 @@ const (
 	HeaderLength = 512
 )
 
-func Parse(b []byte) (*ClamAV, []error) {
+// Parse reads the ClamAV CVD file, parses it to a struct in-memory, and then validates it. It returns a map of errors,
+// if there are any. The error map contains [field]error.
+func ParseCVD(b []byte) (*ClamAV, []error) {
 	var header []byte
 	var def []byte
 	var errs []error
@@ -21,11 +23,10 @@ func Parse(b []byte) (*ClamAV, []error) {
 	def = append(def, b[512:]...)
 
 	head := NewHeaders(header, def)
-	if len(head.Problems) > 0 {
-		errs = append(errs, head.Problems...)
-	}
 
-	return &ClamAV{}, errs
+	return &ClamAV{
+		Header: head,
+	}, errs
 }
 
 func NewHeaders(h, b []byte) HeaderFields {
@@ -44,11 +45,13 @@ func parseHeader(h, b []byte) (HeaderFields) {
 		hFields.Problems = append(hFields.Problems, errors.New("bad def header."))
 	}
 
+	// TODO refactor for the error stuff.
 	hFields.parseTime(headParts[1])
 	hFields.Version = hFields.atou(headParts[2])
 	hFields.Signatures = hFields.atou(headParts[3])
 	hFields.Functionality = hFields.atou(headParts[4])
 	hFields.parseMD5(headParts[5], b)
+	hFields.Builder = headParts[7]
 
 	return hFields
 }
@@ -79,4 +82,8 @@ func (h *HeaderFields) parseMD5(md string, b []byte) {
 
 	h.MD5Hash = md
 	h.MD5Valid = true
+}
+
+func (h *HeaderFields) parseDSig(dsig string, b []byte) {
+
 }

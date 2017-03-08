@@ -5,9 +5,9 @@ import (
 )
 
 type ClamAV struct {
-	Header HeaderFields
+	Header     HeaderFields
 	Definition AVDefinition
-	problems []error
+	Problems   map[string]error
 }
 
 type HeaderFields struct {
@@ -18,6 +18,7 @@ type HeaderFields struct {
 	MD5Hash       string
 	MD5Valid      bool
 	DSignature    string
+	DSigValid     bool
 	Builder       string
 	Stime         uint
 	Problems      []error

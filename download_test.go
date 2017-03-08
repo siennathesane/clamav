@@ -3,7 +3,6 @@ package main
 import (
 	"testing"
 	"time"
-	"crypto/md5"
 )
 
 /*
@@ -45,7 +44,8 @@ func newInvalidDef() ClamAV {
 			Version: 1234,
 			Signatures: 4,
 			Functionality: 1,
-			MD5: md5.New(),
+			MD5Hash: "345ydgfn467ehen7ns6abtese4",
+			MD5Valid: false,
 			DSignature: "345ertd/fgcvb34+5i8xcvkjwe",
 			Builder: "TestSuite",
 			Stime: 0,
