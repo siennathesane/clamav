@@ -1,16 +1,25 @@
 package main
 
 import (
-	"strings"
-	"strconv"
-	"errors"
-	"time"
 	"crypto/md5"
+	"errors"
 	"fmt"
+	"math/big"
+	"strconv"
+	"strings"
+	"time"
 )
 
 const (
 	HeaderLength = 512
+
+	// I'll be blatantly honest, I have no idea what these numbers are actually for?
+	// Now that I"ve thought about it...I think they are the large number that a signature has to reach in order to
+	// be validated? Or they are one part of the equation used to validate a signature? I should really figure that
+	// part out.
+	Nstr      = "118640995551645342603070001658453189751527774412027743746599405743243142607464144767361060640655844749760788890022283424922762488917565551002467771109669598189410434699034532232228621591089508178591428456220796841621637175567590476666928698770143328137383952820383197532047771780196576957695822641224262693037"
+	Estr      = "100001027"
+	RefString = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/"
 )
 
 // Parse reads the ClamAV CVD file, parses it to a struct in-memory, and then validates it. It returns a map of errors,
@@ -19,8 +28,8 @@ func ParseCVD(b []byte) (*ClamAV, []error) {
 	var header []byte
 	var def []byte
 	var errs []error
-	header = append(header, b[0:512]...)
-	def = append(def, b[512:]...)
+	header = append(header, b[0:HeaderLength]...)
+	def = append(def, b[HeaderLength:]...)
 
 	head := NewHeaders(header, def)
 
@@ -33,7 +42,7 @@ func NewHeaders(h, b []byte) HeaderFields {
 	return parseHeader(h, b)
 }
 
-func parseHeader(h, b []byte) (HeaderFields) {
+func parseHeader(h, b []byte) HeaderFields {
 	var errs []error
 	hFields := HeaderFields{
 		Problems: errs,
@@ -64,6 +73,7 @@ func (h *HeaderFields) parseTime(s string) {
 	h.CreationTime = pTime
 }
 
+// atou is a simple helper function.
 func (h *HeaderFields) atou(s string) uint {
 	x, err := strconv.Atoi(s)
 	if err != nil {
@@ -74,6 +84,9 @@ func (h *HeaderFields) atou(s string) uint {
 
 func (h *HeaderFields) parseMD5(md string, b []byte) {
 	localHash := fmt.Sprintf("%x", md5.Sum(b))
+
+	// this is the simple way around golang not having isalnum.
+	// https://git.io/vyrcB
 	if md != localHash {
 		h.Problems = append(h.Problems, errors.New("md5 does not match!"))
 		h.MD5Valid = false
@@ -85,5 +98,114 @@ func (h *HeaderFields) parseMD5(md string, b []byte) {
 }
 
 func (h *HeaderFields) parseDSig(dsig string, b []byte) {
+	n, e := big.NewInt(0), big.NewInt(0)
+	//var refChar, refChar2 string
 
+	if err := readRadix(n, Nstr, 10); err != nil {
+		h.Problems = append(h.Problems, err)
+	}
+	if err := readRadix(e, Estr, 10); err != nil {
+		h.Problems = append(h.Problems, err)
+	}
+
+
+}
+
+// decodeSig sucked to write. I'm just going to leave that there. bigints in go are really hard because they are
+// all pointers, which, not a bad thing necessarily, but it gets really confusing when you're porting code.
+func (h *HeaderFields) decodeSig(s string, plen uint, e,n *big.Int) string {
+	var i, dec int
+	var plainChar string
+	slen := len(s)
+
+	r,p,c := big.NewInt(0), big.NewInt(0), big.NewInt(0)
+	for i = 0; i < slen; i++ {
+		dec = charMap(string(s[i]))
+		if dec < 0 {
+			h.Problems = append(h.Problems, errors.New("char decode out of range."))
+		}
+	}
+
+	// this feels so wrong.
+	r.Set(big.NewInt(int64(dec)))
+
+	// let's be honest here, I'm not entirely sure I'm doing this right.
+	// please don't ask me to explain it, I'm just porting the code.
+	// https://git.io/vyrdU
+	r.Mul(r, big.NewInt(int64(6 * i)))
+	c.Add(r,c)
+	p.Exp(c, e, n)
+	c.Set(big.NewInt(256))
+
+	// DivMod sets z to the quotient x div y and m to the modulus x mod y and returns the pair (z, m) for y != 0.
+	// If y == 0, a division-by-zero run-time panic occurs.
+	// https://git.io/vyrNu
+	for i := plen - 1; i >= 0; i-- {
+		// I think this is right, the original C code is really confusing.
+		p, r = p.DivMod(p,c, big.NewInt(0))
+		plainChar += string(len(r.String()))
+	}
+	return plainChar
+}
+
+func charMap(s string) int {
+	var lcharmap = []string{
+		"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l",
+		"m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x",
+		"y", "z",
+		"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L",
+		"M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X",
+		"Y", "Z",
+		"0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+		"+", "/",
+	}
+	for i := 0; i < len(lcharmap); i++ {
+		if lcharmap[i] == s {
+			return i
+		}
+	}
+	return -1
+}
+
+// readRadix implements bignum_fast.fp_read_radix from tomsfastmath library with some minor changes since Go has a
+// bigint/bignum type.
+// radix == base, for all intents and purposes.
+func readRadix(x *big.Int, s string, radix int) error {
+	if radix < 2 || radix > 64 {
+		return errors.New("invalid signature base!")
+	}
+
+	var refChar string
+	var y int
+
+	// TODO find a better way to do this, this seems really convoluted.
+	for i := 0; i < len(s); i++ {
+		/*
+		if the base is < 36, conversions are case-insensitive.
+		therefore, 1AB == 1ab in hex.
+		 */
+		if radix < 36 {
+			refChar = strings.ToUpper(string(s[i]))
+		} else {
+			refChar = string(s[i])
+		}
+		for y = 0; y < 64; y++ {
+			if refChar == string(RefString[y]) {
+				break
+			}
+		}
+
+		/*
+		if the character was found in the reference string
+		and is less than the given base, add it to our number.
+		 */
+		if y < radix {
+			x.Mul(x, x)
+			x.Add(x, x)
+		} else {
+			break
+		}
+	}
+
+	return nil
 }
