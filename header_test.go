@@ -55,9 +55,9 @@ unsigned int stime;	    9
 func newInvalidDef() ClamAV {
 	return ClamAV{
 		Header: HeaderFields{
-			CreationTime: time.Now(),
-			Version: 1234,
-			Signatures: 4,
+			CreationTime:  time.Now(),
+			Version:       1234,
+			Signatures:    4,
 			Functionality: 1,
 			MD5Hash: "345ydgfn467ehen7ns6abtese4",
 			MD5Valid: false,
