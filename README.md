@@ -1,8 +1,10 @@
 ## ClamAV Private Mirror
 
+[![license](https://img.shields.io/badge/license-Apache%20v2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
+
 ### How To Use
 
-* `cf push $(echo "some app name!")`
+* `cf push`
 
 OR
 
