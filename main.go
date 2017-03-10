@@ -16,15 +16,15 @@
 package main
 
 import (
+	"fmt"
 	log "github.com/Sirupsen/logrus"
+	"github.com/allegro/bigcache"
+	"github.com/cloudfoundry-community/go-cfenv"
 	"gopkg.in/robfig/cron.v2"
 	"net/http"
-	"github.com/cloudfoundry-community/go-cfenv"
-	"fmt"
-	"github.com/allegro/bigcache"
-	"time"
 	"os"
 	"strings"
+	"time"
 )
 
 const (
