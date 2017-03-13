@@ -12,19 +12,20 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
- */
+*/
 package main
 
 import (
+	"errors"
+	log "github.com/Sirupsen/logrus"
+	"github.com/allegro/bigcache"
+	"io/ioutil"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
-	"net/http"
-	"io/ioutil"
 	"sync"
-	log "github.com/Sirupsen/logrus"
-	"github.com/allegro/bigcache"
-	"errors"
+	"time"
 )
 
 // TODO rewrite most of this at a later time so it's more extensible.
@@ -41,7 +42,9 @@ var dbTypes = []string{"main", "bytecode", "daily"}
 // save files.
 func DownloadDatabase(c *bigcache.BigCache) {
 	// TODO add client tracing for InfoSec/auditing.
-	var downloadClient = &http.Client{}
+	var downloadClient = &http.Client{
+		Timeout: time.Duration(time.Second * 5),
+	}
 	var wg sync.WaitGroup
 
 	// added concurrency so it wasn't blocking.
@@ -87,7 +90,7 @@ func downloadFile(rawUrl string, cl *http.Client, c *bigcache.BigCache, dbType s
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.WithField("err",err).Errorf("failed to read body!")
+		log.WithField("err", err).Errorf("failed to read body!")
 	}
 
 	// normally this can be deferred, but it needs to closed before adding into the cache.
@@ -124,7 +127,7 @@ func ParseCvdVersion(cvd []byte) (int, error) {
 	headParts := strings.Split(headStr, ":")
 	if len(headParts) < 3 {
 		log.WithFields(log.Fields{
-			"err":    errors.New("bad def header."),
+			"err": errors.New("bad def header."),
 		}).Error("invalid header string.")
 		return 0, errors.New("bad def header.")
 	}
@@ -132,7 +135,7 @@ func ParseCvdVersion(cvd []byte) (int, error) {
 	verNum, err := strconv.Atoi(headParts[2])
 	if err != nil {
 		log.WithFields(log.Fields{
-			"err":    err,
+			"err": err,
 		}).Error("invalid header string.")
 		return 0, err
 	}

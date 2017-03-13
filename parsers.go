@@ -2,8 +2,10 @@ package main
 
 import (
 	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"math/big"
 	"strconv"
 	"strings"
@@ -24,18 +26,25 @@ const (
 
 // Parse reads the ClamAV CVD file, parses it to a struct in-memory, and then validates it. It returns a map of errors,
 // if there are any. The error map contains [field]error.
-func ParseCVD(b []byte) (*ClamAV, []error) {
+func ParseCVD(b []byte, e *[]error) (*ClamAV) {
 	var header []byte
 	var def []byte
-	var errs []error
 	header = append(header, b[0:HeaderLength]...)
 	def = append(def, b[HeaderLength:]...)
 
 	head := NewHeaders(header, def)
 
+	if len(head.Problems) > 0 {
+		e = &head.Problems
+		return &ClamAV{}
+	}
+
 	return &ClamAV{
 		Header: head,
-	}, errs
+		Definition: AVDefinition{
+			Body: def,
+		},
+	}
 }
 
 func NewHeaders(h, b []byte) HeaderFields {
@@ -61,6 +70,8 @@ func parseHeader(h, b []byte) HeaderFields {
 	hFields.Functionality = hFields.atou(headParts[4])
 	hFields.parseMD5(headParts[5], b)
 	hFields.Builder = headParts[7]
+
+	hFields.parseDSig(b)
 
 	return hFields
 }
@@ -97,9 +108,8 @@ func (h *HeaderFields) parseMD5(md string, b []byte) {
 	h.MD5Valid = true
 }
 
-func (h *HeaderFields) parseDSig(dsig string, b []byte) {
+func (h *HeaderFields) parseDSig(b []byte) {
 	n, e := big.NewInt(0), big.NewInt(0)
-	//var refChar, refChar2 string
 
 	if err := readRadix(n, Nstr, 10); err != nil {
 		h.Problems = append(h.Problems, err)
@@ -108,18 +118,29 @@ func (h *HeaderFields) parseDSig(dsig string, b []byte) {
 		h.Problems = append(h.Problems, err)
 	}
 
+	plainSig := h.decodeSig(string(b), 16, e, n)
 
+	// libclamav only compares the first 16 characters. /shrug
+	hexSig := hex.EncodeToString([]byte(string(plainSig[:16])))
+	log.Debugf("decoded signature: %s", hexSig)
+
+	if h.MD5Hash == hexSig {
+		h.DSignature = hexSig
+		h.DSigValid = true
+	} else {
+		h.DSignature = hexSig
+		h.DSigValid = false
+	}
 }
 
 // decodeSig sucked to write. I'm just going to leave that there. bigints in go are really hard because they are
 // all pointers, which, not a bad thing necessarily, but it gets really confusing when you're porting code.
-func (h *HeaderFields) decodeSig(s string, plen uint, e,n *big.Int) string {
+func (h *HeaderFields) decodeSig(s string, plen uint, e, n *big.Int) string {
 	var i, dec int
 	var plainChar string
-	slen := len(s)
 
-	r,p,c := big.NewInt(0), big.NewInt(0), big.NewInt(0)
-	for i = 0; i < slen; i++ {
+	r, p, c := big.NewInt(0), big.NewInt(0), big.NewInt(0)
+	for i = 0; i < len(s); i++ {
 		dec = charMap(string(s[i]))
 		if dec < 0 {
 			h.Problems = append(h.Problems, errors.New("char decode out of range."))
@@ -129,25 +150,31 @@ func (h *HeaderFields) decodeSig(s string, plen uint, e,n *big.Int) string {
 	// this feels so wrong.
 	r.Set(big.NewInt(int64(dec)))
 
-	// let's be honest here, I'm not entirely sure I'm doing this right.
-	// please don't ask me to explain it, I'm just porting the code.
-	// https://git.io/vyrdU
-	r.Mul(r, big.NewInt(int64(6 * i)))
-	c.Add(r,c)
+	/*
+	 let's be honest here, I'm not entirely sure I'm doing this right.
+	 please don't ask me to explain it, I'm just porting the code.
+	 https://git.io/vyrdU
+	*/
+	r.Mul(r, big.NewInt(int64(6*i)))
+	c.Add(r, c)
 	p.Exp(c, e, n)
 	c.Set(big.NewInt(256))
 
-	// DivMod sets z to the quotient x div y and m to the modulus x mod y and returns the pair (z, m) for y != 0.
-	// If y == 0, a division-by-zero run-time panic occurs.
-	// https://git.io/vyrNu
+	/*
+		DivMod sets z to the quotient x div y and m to the modulus x mod y and returns the pair (z, m) for y != 0.
+		If y == 0, a division-by-zero run-time panic occurs.
+		https://git.io/vyrNu
+	*/
 	for i := plen - 1; i >= 0; i-- {
 		// I think this is right, the original C code is really confusing.
-		p, r = p.DivMod(p,c, big.NewInt(0))
+		p, r = p.DivMod(p, c, big.NewInt(0))
 		plainChar += string(len(r.String()))
 	}
 	return plainChar
 }
 
+// charMap is a logic port from the libclamav code. it was faster/easier at the time to just port the logic than to
+// look at making it better. there may be a better way.
 func charMap(s string) int {
 	var lcharmap = []string{
 		"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l",
@@ -167,9 +194,8 @@ func charMap(s string) int {
 	return -1
 }
 
-// readRadix implements bignum_fast.fp_read_radix from tomsfastmath library with some minor changes since Go has a
+// readRadix implements bignum_fast.fp_read_radix() from tomsfastmath library with some minor changes since Go has a
 // bigint/bignum type.
-// radix == base, for all intents and purposes.
 func readRadix(x *big.Int, s string, radix int) error {
 	if radix < 2 || radix > 64 {
 		return errors.New("invalid signature base!")
@@ -181,10 +207,10 @@ func readRadix(x *big.Int, s string, radix int) error {
 	// TODO find a better way to do this, this seems really convoluted.
 	for i := 0; i < len(s); i++ {
 		/*
-		if the base is < 36, conversions are case-insensitive.
-		therefore, 1AB == 1ab in hex.
-		 */
-		if radix < 36 {
+			if the base is < 36, conversions are case-insensitive.
+			therefore, 1AB == 1ab in hex.
+		*/
+		if radix <= 36 {
 			refChar = strings.ToUpper(string(s[i]))
 		} else {
 			refChar = string(s[i])
@@ -196,9 +222,9 @@ func readRadix(x *big.Int, s string, radix int) error {
 		}
 
 		/*
-		if the character was found in the reference string
-		and is less than the given base, add it to our number.
-		 */
+			if the character was found in the reference string
+			and is less than the given base, add it to our number.
+		*/
 		if y < radix {
 			x.Mul(x, x)
 			x.Add(x, x)
