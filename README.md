@@ -1,6 +1,7 @@
 ## ClamAV Private Mirror
 
 [![license](https://img.shields.io/badge/license-Apache%20v2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
+[![Build Status](https://travis-ci.org/mxplusb/clamav.svg?branch=master)](https://travis-ci.org/mxplusb/clamav)
 
 ### How To Use
 

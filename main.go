@@ -12,23 +12,24 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
- */
+*/
+
 package main
 
 import (
+	"fmt"
 	log "github.com/Sirupsen/logrus"
+	"github.com/allegro/bigcache"
+	"github.com/cloudfoundry-community/go-cfenv"
 	"gopkg.in/robfig/cron.v2"
 	"net/http"
-	"github.com/cloudfoundry-community/go-cfenv"
-	"fmt"
-	"github.com/allegro/bigcache"
-	"time"
 	"os"
 	"strings"
+	"time"
 )
 
 const (
-	DefaultPort = 8080
+	defaultPort = 8080
 )
 
 func init() {
@@ -44,7 +45,7 @@ func main() {
 	appEnv, err := cfenv.Current()
 	if err != nil {
 		log.Error(err)
-		port = fmt.Sprintf(":%d", DefaultPort)
+		port = fmt.Sprintf(":%d", defaultPort)
 	} else {
 		port = fmt.Sprintf(":%d", appEnv.Port)
 	}
@@ -61,16 +62,17 @@ func main() {
 	})
 
 	if err != nil {
-		log.Errorf("cannot initialise cache. %s")
+		log.Errorf("cannot initialise cache. %s", err)
 	}
 
 	// let the initial seed run in the background so the web server can start.
 	log.Info("starting initial seed in the background.")
-	go DownloadDatabase(cache)
+	dl := NewDownloader(true)
+	dl.DownloadDatabase(cache)
 
 	// start a new crontab asynchronously.
 	c := cron.New()
-	c.AddFunc("@hourly", func() { DownloadDatabase(cache) })
+	c.AddFunc("@hourly", func() { NewDownloader(true).DownloadDatabase(cache) })
 	c.Start()
 
 	log.Info("started cron job for definition updates.")
