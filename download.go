@@ -30,9 +30,9 @@ import (
 )
 
 const (
-	// Primary mirror for ClamAV definitions.
-	primaryMirror   = "http://database.clamav.net"
-	secondaryMirror = "https://pivotal-clamav-mirror.s3.amazonaws.com"
+	// Mirrors for ClamAV definitions. The standard mirror is slow as all get out.
+	secondaryMirror = "http://database.clamav.net"
+	primaryMirror   = "https://pivotal-clamav-mirror.s3.amazonaws.com"
 )
 
 // Downloader is the base structure for grabbing the necessary files.
