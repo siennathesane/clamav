@@ -34,3 +34,7 @@ OR
 ### Contributing
 
 * Keep It Simple.
+* The standard testing library is awesome. Let's keep using it.
+
+To unzip the CVD files:
+`cd filedefs/ && tail -c $(expr $(wc -c $FILE.cvd | awk '{print $1}') - 512) $FILE.cvd | tar zxvf -`
