@@ -4,12 +4,14 @@ import (
 	"time"
 )
 
+// ClamAV is the typed structure of a ClamAV definition file.
 type ClamAV struct {
 	Header     HeaderFields
 	Definition AVDefinition
 	Problems   map[string]error
 }
 
+// HeaderFields are the parsed 512 bytes of the antivirus definition.
 type HeaderFields struct {
 	CreationTime  time.Time
 	Version       uint
@@ -24,6 +26,7 @@ type HeaderFields struct {
 	Problems      []error
 }
 
+// AVDefinition is the binary blob of antivirus definition data.
 type AVDefinition struct {
 	Body []byte
 }

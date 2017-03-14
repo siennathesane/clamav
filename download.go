@@ -13,6 +13,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
+
 package main
 
 import (
@@ -31,7 +32,9 @@ import (
 // TODO rewrite most of this at a later time so it's more extensible.
 
 const (
-	MainMirror = "http://database.clamav.net"
+	// Primary mirror for ClamAV definitions.
+	primaryMirror = "http://database.clamav.net"
+
 	// TODO not sure I need this.
 	// TextRecord = "current.cvd.clamav.net"
 )
@@ -50,29 +53,29 @@ func DownloadDatabase(c *bigcache.BigCache) {
 	// added concurrency so it wasn't blocking.
 	for _, dbType := range dbTypes {
 		wg.Add(1)
-		go downloadFile(MainMirror+"/"+dbType+".cvd", downloadClient, c, dbType, &wg)
+		go downloadFile(primaryMirror+"/"+dbType+".cvd", downloadClient, c, dbType, true, &wg)
 	}
 	wg.Wait()
 	log.Info("done downloading definitions.")
 }
 
-//downloadFile performs the download and places it in the /tmp directory.
-func downloadFile(rawUrl string, cl *http.Client, c *bigcache.BigCache, dbType string, wg *sync.WaitGroup) {
+// downloadFile performs the download and places it in the /tmp directory.
+func downloadFile(rawURL string, cl *http.Client, c *bigcache.BigCache, dbType string, follow bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	cvdUrl, err := url.Parse(rawUrl)
+	cvdURL, err := url.Parse(rawURL)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"url": cvdUrl,
+			"url": cvdURL,
 		}).Error("cannot parse url.")
 	}
 
-	filename := strings.TrimLeft(cvdUrl.Path, "/")
+	filename := strings.TrimLeft(cvdURL.Path, "/")
 	log.WithFields(log.Fields{
 		"filename": filename,
 	}).Info("downloading definition.")
 
-	resp, err := cl.Get(rawUrl)
+	resp, err := cl.Get(rawURL)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"filename": filename,
@@ -109,11 +112,11 @@ func downloadFile(rawUrl string, cl *http.Client, c *bigcache.BigCache, dbType s
 	}).Info("added to cache!")
 
 	cdiffVer, err := ParseCvdVersion(body)
-	if err == nil {
-		cdiffUrl := MainMirror + "/" + dbType + "-" + strconv.Itoa(cdiffVer) + ".cdiff"
-		log.WithField("url", cdiffUrl).Debug(cdiffUrl)
+	if err == nil && follow {
+		cdiffURL := primaryMirror + "/" + dbType + "-" + strconv.Itoa(cdiffVer) + ".cdiff"
+		log.WithField("url", cdiffURL).Debug(cdiffURL)
 		wg.Add(1)
-		go downloadFile(cdiffUrl, cl, c, dbType, wg)
+		go downloadFile(cdiffURL, cl, c, dbType, follow, wg)
 	}
 
 }
@@ -127,16 +130,16 @@ func ParseCvdVersion(cvd []byte) (int, error) {
 	headParts := strings.Split(headStr, ":")
 	if len(headParts) < 3 {
 		log.WithFields(log.Fields{
-			"err": errors.New("bad def header."),
-		}).Error("invalid header string.")
-		return 0, errors.New("bad def header.")
+			"err": errors.New("bad def header"),
+		}).Error("invalid header string")
+		return 0, errors.New("bad def header")
 	}
 
 	verNum, err := strconv.Atoi(headParts[2])
 	if err != nil {
 		log.WithFields(log.Fields{
 			"err": err,
-		}).Error("invalid header string.")
+		}).Error("invalid header string")
 		return 0, err
 	}
 

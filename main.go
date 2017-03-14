@@ -12,7 +12,8 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
- */
+*/
+
 package main
 
 import (
@@ -28,7 +29,7 @@ import (
 )
 
 const (
-	DefaultPort = 8080
+	defaultPort = 8080
 )
 
 func init() {
@@ -44,7 +45,7 @@ func main() {
 	appEnv, err := cfenv.Current()
 	if err != nil {
 		log.Error(err)
-		port = fmt.Sprintf(":%d", DefaultPort)
+		port = fmt.Sprintf(":%d", defaultPort)
 	} else {
 		port = fmt.Sprintf(":%d", appEnv.Port)
 	}
@@ -61,7 +62,7 @@ func main() {
 	})
 
 	if err != nil {
-		log.Errorf("cannot initialise cache. %s")
+		log.Errorf("cannot initialise cache. %s", err)
 	}
 
 	// let the initial seed run in the background so the web server can start.
