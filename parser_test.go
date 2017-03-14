@@ -21,10 +21,6 @@ import (
 	"testing"
 )
 
-const (
-	RealHeader = "ClamAV-VDB:07 Mar 2017 08-02 -0500:23182:1741572:63:c1537143239006af01e814a4dcd58a48:QC2ZncCPK0AzfYPW8OKvde9GFOO1HyH5qbozl9JZbmlOmZnSV55zWaP9yH9tXiS+JmZWA1277X6pBeTHPCcaqUDakke4W58duZ5mavDGJoWekl3q/5RgVeAg39cM1X4zNf6gER8G+HIWDUka0sRQWal1KXAb1UWkFoKsbHVqgVi:neo:1488891746                                                                                                                                                                                                                                                 ^_<8B>^H^@^@^@^@^@^B"
-)
-
 func newLocalFile(f string) ([]byte, error) {
 	return ioutil.ReadFile(f)
 }
@@ -37,23 +33,8 @@ func newSplit(b []byte) ([]byte, []byte) {
 	return header, def
 }
 
-func TestParseCvdVersion(t *testing.T) {
-	want := 23182
-
-	have, err := ParseCvdVersion([]byte(RealHeader))
-	if err != nil {
-		t.Error(err)
-		t.Fail()
-	}
-
-	if have != want {
-		t.Logf("want %d, have: %d", want, have)
-		t.Fail()
-	}
-}
-
 func TestParseCVD(t *testing.T) {
-	testFile, err := newLocalFile("filedefs/daily.cvd")
+	testFile, err := newLocalFile("filedefs/bytecode.cvd")
 	if err != nil {
 		t.Error("cannot read from cache or local disk! tests cannot run!")
 		t.FailNow()
@@ -93,7 +74,7 @@ func TestHeaderFields_Atou(t *testing.T) {
 
 func TestHeaderFields_ParseMD5(t *testing.T) {
 	testHeader := newEmptyHeader()
-	testFile, err := newLocalFile("filedefs/daily.cvd")
+	testFile, err := newLocalFile("filedefs/bytecode.cvd")
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
