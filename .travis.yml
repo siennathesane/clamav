@@ -2,10 +2,10 @@ language: go
 sudo: required
 
 go:
-  - 1.5
-  - 1.6
-  - 1.7
-  - 1.8
+  - 1.5.x
+  - 1.6.x
+  - 1.7.x
+  - 1.8.x
   - tip
   - master
 
@@ -17,4 +17,13 @@ install:
 
 script:
   - go test -race -v .
-  - gox -verbose
+  - gox -verbose -parallel=2
+
+notifications:
+  email:
+    on_success: change
+    on_failure: always
+
+matrix:
+  allow_failures:
+    - go: master, tip

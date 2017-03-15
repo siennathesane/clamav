@@ -41,12 +41,11 @@ func TestParseCVD(t *testing.T) {
 	}
 
 	var errs []error
-	testRes := ParseCVD(testFile, &errs)
+	_ = ParseCVD(testFile, &errs)
 	if len(errs) > 0 {
 		t.Errorf("%v", errs)
 		t.Fail()
 	}
-	t.Logf("CVD Header: %#v", testRes)
 }
 
 func TestHeaderFields_ParseTime(t *testing.T) {
@@ -88,8 +87,6 @@ func TestHeaderFields_ParseMD5(t *testing.T) {
 	testHeader.ParseMD5(testHeadParts[5], testFileBody)
 
 	got := testHeader.MD5Hash
-
-	t.Logf("got md5: %s, want: %s", got, want)
 
 	if want != got && !testHeader.MD5Valid {
 		t.Errorf("got md5: %s, want: %s", got, want)
