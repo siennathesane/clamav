@@ -17,14 +17,12 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/allegro/bigcache"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"sync"
 )
@@ -164,29 +162,4 @@ func (d *Downloader) DownloadFile(rawURL string, c *bigcache.BigCache) {
 		d.Waiter.Add(1)
 		go d.DownloadFile(cDiffURL, c)
 	}
-}
-
-// ParseCvdVersion reads a ClamAV CVD file and parses it for the version.
-func ParseCvdVersion(cvd []byte) (int, error) {
-	var header []byte
-	header = append(header, cvd[0:512]...)
-
-	headStr := string(header)
-	headParts := strings.Split(headStr, ":")
-	if len(headParts) < 3 {
-		log.WithFields(log.Fields{
-			"err": errors.New("bad def header"),
-		}).Error("invalid header string")
-		return 0, errors.New("bad def header")
-	}
-
-	verNum, err := strconv.Atoi(headParts[2])
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Error("invalid header string")
-		return 0, err
-	}
-
-	return verNum, nil
 }
