@@ -25,12 +25,6 @@ OR
 1. Starts the web server and serves from cache.
 1. Evicts files from cache every 3 hours to prevent stale definitions.
 
-### TODO
-
-1. Finish header structs (including tests).
-1. Parse file on download, before cache insertion.
-1. Don't return bad files.
-
 ### Contributing
 
 * Keep It Simple.
