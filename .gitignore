@@ -1,6 +1,5 @@
 
 /.idea/
-*vendor/
 /clamav
 /clamav_linux_amd64
 /clamav_windows_amd64.exe
