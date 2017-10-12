@@ -13,7 +13,7 @@ install:
   - go get -v github.com/mitchellh/gox
 
 script:
-  - go test -race -v .
+  - go test -v -short -race .
   - gox -verbose -parallel=2
 
 notifications:

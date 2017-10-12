@@ -22,7 +22,7 @@ unsigned int version;   3
 unsigned int sigs;	    4
 unsigned int fl;	    5
 // padding
-char *md5;		    /6
+char *md5;		    6
 char *dsig;		    7
 char *builder;	    8
 unsigned int stime;	    9
