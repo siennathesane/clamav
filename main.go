@@ -17,18 +17,20 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"github.com/allegro/bigcache"
-	"github.com/cloudfoundry-community/go-cfenv"
-	"gopkg.in/robfig/cron.v2"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
+	"github.com/allegro/bigcache"
+	"github.com/cloudfoundry-community/go-cfenv"
+	"gopkg.in/robfig/cron.v2"
 )
 
-const (
+var (
 	defaultPort = 8080
 )
 
@@ -36,9 +38,12 @@ func init() {
 	// TODO add runtime.Caller(1) info to it.
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
+
+	flag.IntVar(&defaultPort, "port", 8080, "Port to run the server on.")
 }
 
 func main() {
+	flag.Parse()
 	var port string
 
 	// this logic just feels weird to me. idk.

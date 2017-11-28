@@ -2,7 +2,7 @@ package bigcache
 
 import (
 	"fmt"
-	"log"
+	"time"
 )
 
 const (
@@ -55,7 +55,15 @@ func newBigCache(config Config, clock clock) (*BigCache, error) {
 	}
 
 	for i := 0; i < config.Shards; i++ {
-		cache.shards[i] = initNewShard(config, onRemove)
+		cache.shards[i] = initNewShard(config, onRemove, clock)
+	}
+
+	if config.CleanWindow > 0 {
+		go func() {
+			for t := range time.Tick(config.CleanWindow) {
+				cache.cleanUp(uint64(t.Unix()))
+			}
+		}()
 	}
 
 	return cache, nil
@@ -65,57 +73,21 @@ func newBigCache(config Config, clock clock) (*BigCache, error) {
 func (c *BigCache) Get(key string) ([]byte, error) {
 	hashedKey := c.hash.Sum64(key)
 	shard := c.getShard(hashedKey)
-	shard.lock.RLock()
-	defer shard.lock.RUnlock()
-
-	itemIndex := shard.hashmap[hashedKey]
-
-	if itemIndex == 0 {
-		return nil, notFound(key)
-	}
-
-	wrappedEntry, err := shard.entries.Get(int(itemIndex))
-	if err != nil {
-		return nil, err
-	}
-	if entryKey := readKeyFromEntry(wrappedEntry); key != entryKey {
-		if c.config.Verbose {
-			log.Printf("Collision detected. Both %q and %q have the same hash %x", key, entryKey, hashedKey)
-		}
-		return nil, notFound(key)
-	}
-	return readEntry(wrappedEntry), nil
+	return shard.get(key, hashedKey)
 }
 
 // Set saves entry under the key
 func (c *BigCache) Set(key string, entry []byte) error {
 	hashedKey := c.hash.Sum64(key)
 	shard := c.getShard(hashedKey)
-	shard.lock.Lock()
-	defer shard.lock.Unlock()
+	return shard.set(key, hashedKey, entry)
+}
 
-	currentTimestamp := uint64(c.clock.epoch())
-
-	if previousIndex := shard.hashmap[hashedKey]; previousIndex != 0 {
-		if previousEntry, err := shard.entries.Get(int(previousIndex)); err == nil {
-			resetKeyFromEntry(previousEntry)
-		}
-	}
-
-	if oldestEntry, err := shard.entries.Peek(); err == nil {
-		c.onEvict(oldestEntry, currentTimestamp, shard.removeOldestEntry)
-	}
-
-	w := wrapEntry(currentTimestamp, hashedKey, key, entry, &shard.entryBuffer)
-
-	for {
-		if index, err := shard.entries.Push(w); err == nil {
-			shard.hashmap[hashedKey] = uint32(index)
-			return nil
-		} else if shard.removeOldestEntry() != nil {
-			return fmt.Errorf("Entry is bigger than max shard size.")
-		}
-	}
+// Delete removes the key
+func (c *BigCache) Delete(key string) error {
+	hashedKey := c.hash.Sum64(key)
+	shard := c.getShard(hashedKey)
+	return shard.del(key, hashedKey)
 }
 
 // Reset empties all cache shards
@@ -123,21 +95,30 @@ func (c *BigCache) Reset() error {
 	for _, shard := range c.shards {
 		shard.reset(c.config)
 	}
-
 	return nil
 }
 
 // Len computes number of entries in cache
 func (c *BigCache) Len() int {
 	var len int
-
 	for _, shard := range c.shards {
-		shard.lock.Lock()
 		len += shard.len()
-		shard.lock.Unlock()
 	}
-
 	return len
+}
+
+// Stats returns cache's statistics
+func (c *BigCache) Stats() Stats {
+	var s Stats
+	for _, shard := range c.shards {
+		tmp := shard.getStats()
+		s.Hits += tmp.Hits
+		s.Misses += tmp.Misses
+		s.DelHits += tmp.DelHits
+		s.DelMisses += tmp.DelMisses
+		s.Collisions += tmp.Collisions
+	}
+	return s
 }
 
 // Iterator returns iterator function to iterate over EntryInfo's from whole cache.
@@ -145,10 +126,18 @@ func (c *BigCache) Iterator() *EntryInfoIterator {
 	return newIterator(c)
 }
 
-func (c *BigCache) onEvict(oldestEntry []byte, currentTimestamp uint64, evict func() error) {
+func (c *BigCache) onEvict(oldestEntry []byte, currentTimestamp uint64, evict func() error) bool {
 	oldestTimestamp := readTimestampFromEntry(oldestEntry)
 	if currentTimestamp-oldestTimestamp > c.lifeWindow {
 		evict()
+		return true
+	}
+	return false
+}
+
+func (c *BigCache) cleanUp(currentTimestamp uint64) {
+	for _, shard := range c.shards {
+		shard.cleanUp(currentTimestamp)
 	}
 }
 
