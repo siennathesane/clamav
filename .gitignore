@@ -1,6 +1,7 @@
 
 /.idea/
 /clamav
+/clamav.exe
 /clamav_linux_amd64
 /clamav_windows_amd64.exe
 /clamav_linux_arm

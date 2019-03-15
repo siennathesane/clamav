@@ -9,7 +9,7 @@
 
 OR
 
-* `glide install && go build -v . && ./clamav`
+* `glide install && go build -v . && PRIMARY_MIRROR="https://database.clamav.net" ./clamav`
 
 ### What It Does
 
@@ -24,6 +24,15 @@ OR
 1. Initialises a cron job to download the new database definitions every hour.
 1. Starts the web server and serves from cache.
 1. Evicts files from cache every 3 hours to prevent stale definitions.
+
+### Mirrors
+
+In order to function properly as a localised cache, you need to set the `PRIMARY_MIRROR` environment variable. Below is a short list of known mirrors.
+
+* http://database.clamav.net
+* https://pivotal-clamav-mirror.s3.amazonaws.com (fast)
+
+If for some reason the primary mirror fails, if you set `SECONDARY_MIRROR`, it will try that one.
 
 ### Contributing
 
