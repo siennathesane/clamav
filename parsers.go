@@ -21,11 +21,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"math/big"
 	"strconv"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -211,7 +212,7 @@ func (h *HeaderFields) decodeSig(s string, plen uint, e, n *big.Int) string {
 	for i := int(plen - 1); i >= 0; i-- {
 		// I think this is right, the original C code is really confusing.
 		p, r = p.DivMod(p, c, big.NewInt(0))
-		plainChar += string(len(r.String()))
+		plainChar += strconv.Itoa(len(r.String()))
 	}
 	return plainChar
 }

@@ -1,13 +1,13 @@
 package main
 
 import (
-	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 )
 
 func newLocalFile(f string) ([]byte, error) {
-	return ioutil.ReadFile(f)
+	return os.ReadFile(f)
 }
 
 func newSplit(b []byte) ([]byte, []byte) {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -14,6 +15,18 @@ func newTempCache() *bigcache.BigCache {
 }
 
 func TestDownloader_DownloadFile(t *testing.T) {
+	err := os.Setenv("PRIMARY_MIRROR", "https://database.clamav.net")
+	if err != nil {
+		t.Fail()
+	}
+
+	defer func() {
+		err := os.Unsetenv("PRIMARY_MIRROR")
+		if err != nil {
+			t.Fail()
+		}
+	}()
+
 	testCache := newTempCache()
 	testDL := NewDownloader(false)
 
@@ -36,6 +49,19 @@ func TestDownloader_DownloadDatabase(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping database test.")
 	}
+
+	err := os.Setenv("PRIMARY_MIRROR", "https://database.clamav.net")
+	if err != nil {
+		t.Fail()
+	}
+
+	defer func() {
+		err := os.Unsetenv("PRIMARY_MIRROR")
+		if err != nil {
+			t.Fail()
+		}
+	}()
+
 	testCache := newTempCache()
 	testDL := NewDownloader(false)
 

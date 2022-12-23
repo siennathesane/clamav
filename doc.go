@@ -1,5 +1,4 @@
 /*
-
 Raw file header example:
 
 ClamAV-VDB:07 Mar 2017 08-02 -0500:23182:1741572:63:c1537143239006af01e814a4dcd58a48:QC2ZncCPK0AzfYPW8OKvde9GFOO1HyH5qbozl9JZbmlOmZnSV55zWaP9yH9tXiS+JmZWA1277X6pBeTHPCcaqUDakke4W58duZ5mavDGJoWekl3q/5RgVeAg39cM1X4zNf6gER8G+HIWDUka0sRQWal1KXAb1UWkFoKsbHVqgVi:neo:1488891746
@@ -27,6 +26,5 @@ char *dsig;		    7
 char *builder;	    8
 unsigned int stime;	    9
 };
-
 */
 package main

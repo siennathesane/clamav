@@ -1,8 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -87,7 +88,18 @@ func (d *Downloader) DownloadFile(rawURL string, c *bigcache.BigCache) {
 		"filename": filename,
 	}).Info("downloading definition.")
 
-	resp, err := d.Get(rawURL)
+	var buf bytes.Buffer
+	req, err := http.NewRequest("GET", rawURL, &buf)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"filename": filename,
+			"err":      err,
+		}).Error("failed to create request")
+	}
+
+	req.Header.Set("User-Agent", "CVDUPDATE/1.0")
+
+	resp, err := d.Do(req)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"filename": filename,
@@ -103,7 +115,7 @@ func (d *Downloader) DownloadFile(rawURL string, c *bigcache.BigCache) {
 		return
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.WithField("err", err).Errorf("failed to read body!")
 	}

@@ -9,7 +9,7 @@
 
 OR
 
-* `glide install && go build -v . && PRIMARY_MIRROR="https://database.clamav.net" ./clamav`
+* `go get -v ./... && go build -v . && PRIMARY_MIRROR="https://database.clamav.net" ./clamav`
 
 ### What It Does
 
@@ -30,14 +30,12 @@ OR
 In order to function properly as a localised cache, you need to set the `PRIMARY_MIRROR` environment variable. Below is a short list of known mirrors.
 
 * http://database.clamav.net
-* https://pivotal-clamav-mirror.s3.amazonaws.com (fast)
 
 If for some reason the primary mirror fails, if you set `SECONDARY_MIRROR`, it will try that one.
 
 ### Contributing
 
 * Keep It Simple.
-* The standard testing library is awesome. Let's keep using it.
 
 To unzip the CVD files:
 `cd filedefs/ && tail -c $(expr $(wc -c $FILE.cvd | awk '{print $1}') - 512) $FILE.cvd | tar zxvf -`
