@@ -5,10 +5,6 @@
 
 ### How To Use
 
-* `cf push`
-
-OR
-
 * `go get -v ./... && go build -v . && PRIMARY_MIRROR="https://database.clamav.net" ./clamav`
 
 ### What It Does
